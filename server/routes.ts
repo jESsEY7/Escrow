@@ -3,10 +3,23 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertContactSchema } from "@shared/schema";
 import { ZodError } from "zod";
+import { registerAuthRoutes } from "./routes/auth.routes";
+import { registerEscrowRoutes } from "./routes/escrow.routes";
+import { registerDisputeRoutes } from "./routes/dispute.routes";
+import { generalLimiter } from "./middleware/security.middleware";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Contact form submission endpoint
-  app.post("/api/contact", async (req, res) => {
+  // Register authentication routes
+  registerAuthRoutes(app);
+  
+  // Register escrow routes
+  registerEscrowRoutes(app);
+  
+  // Register dispute routes
+  registerDisputeRoutes(app);
+
+  // Contact form submission endpoint (public)
+  app.post("/api/contact", generalLimiter, async (req, res) => {
     try {
       const validatedData = insertContactSchema.parse(req.body);
       const contact = await storage.createContact(validatedData);
@@ -35,6 +48,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: "Failed to retrieve contacts" 
       });
     }
+  });
+
+  // Health check endpoint
+  app.get("/api/health", (req, res) => {
+    res.json({ 
+      status: "healthy", 
+      timestamp: new Date().toISOString(),
+      environment: process.env.NODE_ENV || "development",
+    });
   });
 
   const httpServer = createServer(app);

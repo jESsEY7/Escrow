@@ -98,7 +98,7 @@ export function Footer() {
         <div className="border-t border-white/10 pt-8">
           <div className="flex flex-col md:flex-row justify-between items-center">
             <p className="text-gray-400 text-sm">
-              © 2024 SecureEscrow. All rights reserved. Licensed and regulated escrow services.
+              © 2026 SecureEscrow. All rights reserved. Licensed and regulated escrow services.
             </p>
             <div className="flex space-x-6 mt-4 md:mt-0">
               {legalLinks.map((link) => (

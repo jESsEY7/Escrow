@@ -1,0 +1,15 @@
+# Django Escrow Platform - Production Requirements
+
+-r base.txt
+
+# WSGI Server
+gunicorn>=21.0.0
+
+# Static files
+whitenoise>=6.6.0
+
+# Database URL parsing
+dj-database-url>=2.1.0
+
+# Monitoring
+sentry-sdk>=1.34.0

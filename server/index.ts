@@ -1,11 +1,30 @@
+import 'dotenv/config';
 import express, { type Request, Response, NextFunction } from "express";
+import cors from "cors";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { testConnection } from "./db";
+import { 
+  securityHeaders, 
+  sanitizeInput, 
+  corsOptions, 
+  requestLogger,
+  validateContentType,
+  sanitizeError,
+} from "./middleware/security.middleware";
 
 const app = express();
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
 
+// Security middleware (apply before other middleware)
+app.use(securityHeaders);
+app.use(cors(corsOptions));
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: false, limit: "10mb" }));
+app.use(sanitizeInput);
+app.use(requestLogger);
+app.use(validateContentType);
+
+// Request logging middleware
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
@@ -37,14 +56,24 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Test database connection
+  log("Testing database connection...");
+  const dbConnected = await testConnection();
+  
+  if (!dbConnected) {
+    log("⚠️  Database connection failed - some features may not work");
+  }
+
   const server = await registerRoutes(app);
 
+  // Global error handler
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
+    const sanitized = sanitizeError(err);
 
-    res.status(status).json({ message });
-    throw err;
+    log(`Error: ${status} - ${err.message}`);
+    
+    res.status(status).json(sanitized);
   });
 
   // importantly only setup vite in development and after
@@ -58,13 +87,11 @@ app.use((req, res, next) => {
 
   // ALWAYS serve the app on port 5000
   // this serves both the API and the client.
-  // It is the only port that is not firewalled.
   const port = 5000;
-  server.listen({
-    port,
-    host: "0.0.0.0",
-    reusePort: true,
-  }, () => {
-    log(`serving on port ${port}`);
+  server.listen(port, () => {
+    log(`🚀 Server running on port ${port}`);
+    log(`📝 Environment: ${process.env.NODE_ENV || 'development'}`);
+    log(`🔒 Security features enabled`);
+    log(`📊 Database: ${dbConnected ? 'Connected' : 'Disconnected'}`);
   });
 })();
